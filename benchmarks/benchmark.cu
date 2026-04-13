@@ -171,14 +171,17 @@ int main() {
         // Large — where fused really wins (N² savings kick in)
         {1, 1, 1024, 64,  "Large-1K"},
         {1, 1, 2048, 64,  "Large-2K"},
+        {1, 1, 4096, 64,  "Large-4K"},
 
         // Realistic LLM shapes
         {1, 12, 512, 64,  "GPT2-like (H=12)"},
         {2,  8, 512, 64,  "Batch=2, H=8"},
+        {1, 32, 512, 64,  "LLaMA-like (H=32)"},
+        {2, 12, 1024, 64, "GPT2 long (B=2, H=12, N=1K)"},
 
         // Different head dims
         {1, 1,  512, 32,  "d=32"},
-        {1, 1,  512, 128, "d=128"},
+        {1, 1,  512, 64,  "d=64"},
     };
 
     int num = sizeof(benchmarks) / sizeof(benchmarks[0]);

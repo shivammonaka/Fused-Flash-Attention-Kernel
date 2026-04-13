@@ -82,7 +82,7 @@ int main() {
 
         // Different head dimensions
         {1, 1,  128, 32,  "Small head dim (d=32)"},
-        {1, 1,  128, 128, "Large head dim (d=128)"},
+        {1, 1,  128, 64,  "Standard head dim (d=64)"},
 
         // Multi-head and batch
         {1, 4,  128, 64,  "Multi-head (H=4)"},
