@@ -23,7 +23,7 @@ NVCC = nvcc
 
 # --- GPU Architecture ---
 # Change this to match your GPU!
-GPU_ARCH ?= sm_80
+GPU_ARCH ?= sm_75
 
 # --- Compiler Flags ---
 # -O3:          Maximum optimization

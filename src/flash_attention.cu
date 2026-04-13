@@ -18,10 +18,20 @@
 //      d. Accumulate output: O += softmax_weights @ V_tile
 //   3. Final normalization: O /= running_sum
 //
-// Memory traffic:
-//   Reads: Q (once) + K (once) + V (once) = O(N·d) per head
-//   Writes: O (once) = O(N·d) per head
-//   No N×N intermediate! Total HBM traffic is O(N·d) instead of O(N²).
+// Memory traffic (actual):
+//   Q: read once from HBM                          = N·d
+//   K: read once per Q tile = (N/Br) times          = N·d · (N/Br)
+//   V: read once per Q tile = (N/Br) times          = N·d · (N/Br)
+//   O: written once                                  = N·d
+//   Total: O(N²·d / Br) per head
+//
+//   Still a massive win over naive's O(N²) intermediate traffic
+//   because we never write/read the N×N attention matrix to HBM.
+//   For N=4096, d=128, Br=32: we avoid 64MB of intermediate writes
+//   at the cost of repeated K/V reads (each only N·d = 2MB).
+//
+//   Note: FlashAttention-2 improves this further by swapping the
+//   loop order (outer over K/V, inner over Q) to reduce K/V reloads.
 //
 // Thread block mapping:
 //   Grid:  (N / Br, B * H)    — one block per Q-tile per (batch, head)
@@ -82,7 +92,7 @@ __global__ void flash_attention_kernel(
     // IMPORTANT: We use a fixed max dimension (128) for the d axis.
     // For your actual head dim, only [0..d-1] is used.
 
-    const int MAX_D = 128;
+    const int MAX_D = 64;
     __shared__ float Q_tile[TILE_BR][MAX_D];
     __shared__ float K_tile[TILE_BC][MAX_D];
     __shared__ float V_tile[TILE_BC][MAX_D];
@@ -145,7 +155,7 @@ __global__ void flash_attention_kernel(
     for (int kv_block = 0; kv_block < num_kv_blocks; kv_block++) {
 
         // --- 4a. Load K_tile and V_tile ---
-        int kv_row = kv_block * TILE_BC + ty;  // Note: ty indexes within tile
+        // int kv_row = kv_block * TILE_BC + ty;  // Note: ty indexes within tile
 
         // Each thread loads elements for its row of K_tile and V_tile
         // Thread (tx, ty) loads K_tile[ty][tx + k*Bc] for k = 0, 1, ...
